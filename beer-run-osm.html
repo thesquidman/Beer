@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Afternoon Beer Run - Barva (OpenStreetMap)</title>
+    <link rel="icon" href="data:,">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background-color: #fff;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+
+        .app-header {
+            background-color: #fc4c02;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 9999;
+        }
+
+        .app-logo {
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            gap: 15px;
+        }
+
+        .profile-pic {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .username {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .username:hover {
+            color: #fc4c02;
+        }
+
+        .activity-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .beer-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .title {
+            padding: 0 20px 15px;
+            font-size: 32px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .title:hover {
+            color: #fc4c02;
+        }
+
+        .stats {
+            display: flex;
+            padding: 0 20px 20px;
+            gap: 40px;
+        }
+
+        .stat {
+            flex: 1;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        #timeValue {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        #timeValue:hover {
+            color: #fc4c02;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 600px;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            max-height: 400px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .controls.hidden {
+            max-height: 0;
+            padding: 0 20px;
+            overflow: hidden;
+        }
+
+        .toggle-controls-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 1001;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            border: none;
+        }
+
+        .toggle-controls-btn:hover {
+            background: rgba(255, 255, 255, 1);
+        }
+
+        .fit-route-btn {
+            position: absolute;
+            bottom: 60px;
+            right: 15px;
+            background: rgba(252, 76, 2, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 1001;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            border: none;
+            display: none;
+        }
+
+        .fit-route-btn:hover {
+            background: rgba(252, 76, 2, 1);
+        }
+
+        .fit-route-btn.show {
+            display: block;
+        }
+
+        .control-group {
+            margin-bottom: 12px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="number"] {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="number"] {
+            max-width: 80px;
+        }
+
+        button {
+            padding: 8px 15px;
+            background-color: #fc4c02;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #e04402;
+        }
+
+        button.clear-btn {
+            background-color: #666;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        button.clear-btn:hover {
+            background-color: #555;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .preset-btn {
+            padding: 6px 8px;
+            font-size: 11px;
+            background-color: #0066cc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preset-btn:hover {
+            background-color: #0052a3;
+        }
+
+        #locationList {
+            margin-top: 10px;
+            font-size: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .location-item:last-child {
+            border-bottom: none;
+        }
+
+        .location-item button {
+            padding: 4px 10px;
+            font-size: 11px;
+            background-color: #999;
+        }
+
+        .location-item button:hover {
+            background-color: #777;
+        }
+
+        #overLimitBadge {
+            padding: 0 20px 15px;
+            display: none;
+        }
+
+        .kudos {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        .kudos-icon {
+            width: 24px;
+            height: 24px;
+            background-color: #fc4c02;
+            border-radius: 50%;
+        }
+
+        .kudos-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .actions {
+            display: flex;
+            padding: 15px 20px;
+            justify-content: space-around;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        .action-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        /* Custom Leaflet marker styles */
+        .custom-marker {
+            background-color: #fc4c02;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 9px;
+            position: relative;
+        }
+
+        .marker-label-overlay {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(252, 76, 2, 0.95);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 8px;
+            white-space: nowrap;
+            margin-bottom: 3px;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            pointer-events: none;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <div class="app-logo">BARVA</div>
+    </div>
+    
+    <div class="header">
+        <div class="profile-pic">🍺</div>
+        <div class="user-info">
+            <div class="username" onclick="editUsername()" id="username">harry baldwin</div>
+            <div class="activity-meta">
+                <span onclick="editTimestamp()" id="timestamp">Today at 12:29 PM · Barva App</span>
+            </div>
+            <div class="activity-meta">
+                <svg class="beer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M17 8h1a4 4 0 1 1 0 8h-1m-3-8v12m-6 0h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/>
+                </svg>
+                <span onclick="editLocation()" id="location">Sydney, New South Wales</span>
+            </div>
+            <div class="activity-meta" id="taggedPeopleDisplay" style="display: none;">
+                <span style="color: #666;">with <span id="taggedNamesDisplay"></span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="title" id="mainTitle" onclick="editTitle()">Afternoon Beer Run</div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-label">Venues</div>
+            <div class="stat-value" id="venueCount">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Drinks</div>
+            <div class="stat-value" id="beerCount">0</div>
+        </div>
+        <div class="stat">
+            <div class="stat-label">Time</div>
+            <div class="stat-value" id="timeValue" onclick="editTime()">0h 0m</div>
+        </div>
+    </div>
+
+    <div class="map-container">
+        <div id="map"></div>
+        <button class="fit-route-btn" id="fitRouteBtn" onclick="fitRouteToMap()">
+            📍 Fit Route
+        </button>
+        <button class="toggle-controls-btn" onclick="toggleControls()">
+            <span id="toggleText">Hide Controls</span>
+        </button>
+    </div>
+
+    <!-- Controls below map for clean Strava-style screenshot/post -->
+    <div class="controls" id="controls">
+            <div class="control-group">
+                <div class="control-label">SESSION SETTINGS</div>
+                <div class="control-row">
+                    <input type="number" id="timePerBar" placeholder="Mins/bar" min="5" max="180" value="45" onchange="updateTotalTime()">
+                    <input type="number" id="drinksPerBar" placeholder="Drinks/bar" min="1" max="10" value="2">
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    ⏱️ Time per bar • 🍺 Drinks per location
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">KUDOS</div>
+                <div class="control-row">
+                    <input type="number" id="kudosInput" placeholder="Kudos count" min="0" max="9999" value="1" onchange="updateKudos()">
+                    <button class="preset-btn" onclick="document.getElementById('kudosInput').value = parseInt(document.getElementById('kudosInput').value || 0) + 1; updateKudos();" style="padding: 8px 15px;">+1</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">PROFILE PICTURE</div>
+                <div class="control-row">
+                    <input type="file" id="profilePicInput" accept="image/*" onchange="updateProfilePic()" style="font-size: 12px;">
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    Upload your own profile picture
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">MAP STYLE</div>
+                <div class="control-row">
+                    <button class="preset-btn" onclick="switchMapStyle('cartodb')" style="padding: 8px 15px;">CartoDB (Clean)</button>
+                    <button class="preset-btn" onclick="switchMapStyle('osm')" style="padding: 8px 15px;">OpenStreetMap</button>
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    ⚠️ Download only works with CartoDB style
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">TAGGED PEOPLE</div>
+                <div class="control-row">
+                    <input type="text" id="taggedPerson" placeholder="Name to tag">
+                    <button class="preset-btn" onclick="addTaggedPerson()" style="padding: 8px 15px; white-space: nowrap;">Add</button>
+                </div>
+                <div id="taggedList" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">SYDNEY CBD BARS</div>
+                <input type="text" id="barSearch" placeholder="🔍 Search bars..." oninput="filterBars()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; font-size: 14px;">
+                <div id="barsList" style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
+                    <div class="preset-buttons" id="presetButtons">
+                        <!-- Buttons will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">ADD CUSTOM VENUE</div>
+                <div class="control-row">
+                    <input type="text" id="venueName" placeholder="Venue name">
+                    <button onclick="addCustomLocation()">Add</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-label">YOUR BEER JOURNEY</div>
+                <div id="locationList"></div>
+            </div>
+            <button class="clear-btn" onclick="clearAll()">Clear All Venues</button>
+    </div>
+
+    <div class="kudos">
+        <div class="kudos-icon"></div>
+        <div class="kudos-text">
+            <span id="kudosCount">1</span> gave kudos
+        </div>
+    </div>
+
+    <div id="overLimitBadge" style="padding: 0 20px 15px; display: none;">
+        <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 10px 15px; border-radius: 6px; text-align: center; font-weight: 600; font-size: 13px;">
+            Over the limit: <span id="overLimitScore"></span> standard drinks
+        </div>
+    </div>
+
+    <div id="venueStats" style="padding: 0 20px 15px; display: none;">
+        <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+            <div style="font-weight: 600; margin-bottom: 10px; font-size: 14px; color: #333;">Venues Visited</div>
+            <div id="venueStatsList" style="font-size: 13px; color: #666; line-height: 1.6;"></div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="action-btn">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+            </svg>
+        </button>
+        <button class="action-btn">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        </button>
+        <button class="action-btn" onclick="downloadPost()" title="Download as image">
+            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+        </button>
+    </div>
+
+    <div style="padding: 20px; text-align: center;">
+        <button onclick="downloadPost()" style="background: linear-gradient(135deg, #fc4c02 0%, #e64302 100%); color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(252, 76, 2, 0.3); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(252, 76, 2, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(252, 76, 2, 0.3)'">
+            📥 Download Beer Run Image
+        </button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        // Data
+        let locations = [];
+        let totalBeers = 0;
+        let taggedPeople = [];
+        let map;
+        let markers = [];
+        let routePolyline;
+
+        // Load all bars from scraped OSM data
+        const knownBars = [];
+
+        // Track current tile layer
+        let currentTileLayer;
+        let currentMapStyle = 'cartodb';
+
+        // Initialize map
+        async function initMap() {
+            map = L.map('map').setView([-33.8688, 151.2093], 15);
+            
+            // Use CartoDB tiles by default - free and CORS-friendly
+            currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                maxZoom: 19,
+                subdomains: 'abcd'
+            }).addTo(map);
+
+            // Load all scraped bars
+            try {
+                const response = await fetch('../osm-bars-sydney.json');
+                const bars = await response.json();
+                knownBars.push(...bars);
+                
+                // Create preset buttons
+                const buttonsContainer = document.getElementById('presetButtons');
+                bars.forEach(bar => {
+                    const btn = document.createElement('button');
+                    btn.className = 'preset-btn';
+                    btn.textContent = bar.name;
+                    btn.onclick = () => addBarByCoords(bar.name, bar.lat, bar.lon);
+                    buttonsContainer.appendChild(btn);
+                });
+            } catch (e) {
+                console.error('Could not load bars:', e);
+                // MASSIVE bar list - 140+ venues across Sydney
+                const fallbackBars = [
+                    {name: 'Hotel CBD', lat: -33.8685813, lon: 151.2058388},
+                    {name: "PJ O'Brien's", lat: -33.8688477, lon: 151.2054211},
+                    {name: 'The Establishment', lat: -33.864137, lon: 151.2076285},
+                    {name: 'Ivy', lat: -33.8663182, lon: 151.2075706},
+                    {name: 'Opera Bar', lat: -33.858334, lon: 151.2138472},
+                    {name: 'The Glenmore', lat: -33.8595233, lon: 151.2073996},
+                    {name: 'The Baxter Inn', lat: -33.8697467, lon: 151.2055275},
+                    {name: 'Bulletin Place', lat: -33.8625799, lon: 151.2095667},
+                    {name: 'Hero of Waterloo', lat: -33.8576938, lon: 151.2058888},
+                    {name: 'Palmer & Co', lat: -33.8641755, lon: 151.2084057},
+                    {name: 'Cantina OK!', lat: -33.8702686, lon: 151.205053},
+                    {name: 'Door Knock', lat: -33.8661792, lon: 151.2089983},
+                    {name: 'The Duke', lat: -33.8697092, lon: 151.2057496},
+                    {name: 'Bar Copains', lat: -33.8830149, lon: 151.2113013},
+                    {name: 'Centro 86', lat: -33.8669866, lon: 151.2089762},
+                    {name: 'Bristol Arms', lat: -33.8677913, lon: 151.2032395},
+                    {name: 'Slip Inn', lat: -33.868679, lon: 151.203409},
+                    {name: 'The Lord Gladstone', lat: -33.8877872, lon: 151.2013555},
+                    {name: 'The Redfern', lat: -33.8926431, lon: 151.2019365},
+                    {name: 'Woolpack Hotel', lat: -33.8921461, lon: 151.2054266},
+                    {name: 'The Abercrombie Hotel', lat: -33.8844932, lon: 151.1987369},
+                    {name: 'Crystal Palace Hotel', lat: -33.8823518, lon: 151.2041815},
+                    {name: 'Chamberlain Hotel', lat: -33.8792754, lon: 151.2072485},
+                    {name: 'Edinburgh Castle Hotel', lat: -33.8746403, lon: 151.2081574},
+                    {name: 'Hotel Sweeney\'s', lat: -33.8726468, lon: 151.2058566},
+                    {name: 'Pyrmont Bridge Hotel', lat: -33.8698416, lon: 151.1977071},
+                    {name: 'Hotel Downing', lat: -33.8763828, lon: 151.208738},
+                    {name: 'Sir John Young Hotel', lat: -33.8764928, lon: 151.205955},
+                    {name: 'Cheers Bar', lat: -33.8766439, lon: 151.2059572},
+                    {name: 'City of Sydney RSL Club', lat: -33.8768597, lon: 151.2058774},
+                    {name: 'Star Hotel', lat: -33.877738, lon: 151.2045538},
+                    {name: 'Scruffy Murphy\'s', lat: -33.8780335, lon: 151.206008},
+                    {name: 'The Bat & Ball Hotel', lat: -33.8921871, lon: 151.2164697},
+                    {name: 'Olympic Hotel', lat: -33.8887592, lon: 151.2275506},
+                    {name: 'Glengarry Castle Hotel', lat: -33.8911189, lon: 151.1965096},
+                    {name: 'M Bar Thai Eatery', lat: -33.8766405, lon: 151.2087047},
+                    {name: 'Charlie Chan', lat: -33.8784997, lon: 151.2054001},
+                    {name: 'Mountbatten Hotel', lat: -33.8805134, lon: 151.2047776},
+                    {name: 'Bar Broadway', lat: -33.8842559, lon: 151.2020935},
+                    {name: 'Agincourt', lat: -33.8837657, lon: 151.2022478},
+                    {name: 'Lord Wolseley Hotel', lat: -33.8766843, lon: 151.1967476},
+                    {name: 'Captain Cook Hotel', lat: -33.8588259, lon: 151.2034083},
+                    {name: 'Ship Inn', lat: -33.8617357, lon: 151.2094506},
+                    {name: 'Orient Hotel', lat: -33.8590991, lon: 151.2086941},
+                    {name: 'Observer Hotel', lat: -33.8588301, lon: 151.2088149},
+                    {name: 'Mercantile Hotel', lat: -33.8571281, lon: 151.2083677},
+                    {name: 'Harts Pub', lat: -33.8617756, lon: 151.2063807},
+                    {name: 'Glasgow Arms Hotel', lat: -33.8780953, lon: 151.1985828},
+                    {name: 'P.J. Gallagher\'s', lat: -33.8944208, lon: 151.2250171},
+                    {name: 'East Village Hotel Balmain', lat: -33.857618, lon: 151.1924966},
+                    {name: 'Kauri Foreshore Hotel', lat: -33.8760352, lon: 151.1896535},
+                    {name: 'The London Hotel', lat: -33.8583598, lon: 151.1844622},
+                    {name: 'Unity Hall', lat: -33.8576298, lon: 151.1807837},
+                    {name: 'Royal Oak', lat: -33.8555843, lon: 151.1809784},
+                    {name: 'Australian Heritage Hotel', lat: -33.8596452, lon: 151.2070221},
+                    {name: 'Frisco Hotel', lat: -33.870072, lon: 151.2216068},
+                    {name: 'All Hands Brewing Company', lat: -33.8672432, lon: 151.2015537},
+                    {name: 'Marlborough Hotel', lat: -33.8934327, lon: 151.1833255},
+                    {name: 'Kuletos Cocktail Bar', lat: -33.893714, lon: 151.1830351},
+                    {name: 'The Imperial Hotel', lat: -33.8991723, lon: 151.1826169},
+                    {name: 'Madame nhu', lat: -33.8801237, lon: 151.2100648},
+                    {name: 'Erskineville Hotel', lat: -33.8992524, lon: 151.1834664},
+                    {name: 'Greenwood Hotel', lat: -33.8402918, lon: 151.2074027},
+                    {name: 'Station Tavern', lat: -33.8409591, lon: 151.2081456},
+                    {name: 'Beauchamp Hotel', lat: -33.8817213, lon: 151.2189808},
+                    {name: 'Pocket Bar', lat: -33.8785218, lon: 151.2152267},
+                    {name: 'The Village', lat: -33.8776724, lon: 151.2166097},
+                    {name: 'The Lord Roberts', lat: -33.8756515, lon: 151.2151752},
+                    {name: 'Time to Vino', lat: -33.8756764, lon: 151.2152835},
+                    {name: 'Hotel William', lat: -33.8743485, lon: 151.2145347},
+                    {name: 'The Nags Head', lat: -33.8825896, lon: 151.1846914},
+                    {name: 'Bar Cleveland', lat: -33.891891, lon: 151.2142597},
+                    {name: 'The Riley', lat: -33.8787401, lon: 151.2142976},
+                    {name: 'Quay Bar', lat: -33.8618286, lon: 151.2107144},
+                    {name: 'Manning Bar', lat: -33.8868499, lon: 151.1875444},
+                    {name: 'The Oxford Hotel', lat: -33.8802585, lon: 151.2167274},
+                    {name: 'World Square Pub', lat: -33.8776448, lon: 151.2060335},
+                    {name: 'Settlement', lat: -33.8658229, lon: 151.203571},
+                    {name: 'Small Bar', lat: -33.8666592, lon: 151.2037193},
+                    {name: 'The Office', lat: -33.8669349, lon: 151.2045486},
+                    {name: 'The Wynyard Hotel', lat: -33.8668422, lon: 151.2048993},
+                    {name: 'Harlequin Inn', lat: -33.8697564, lon: 151.1941583},
+                    {name: 'Pyrmont Point Hotel', lat: -33.8675119, lon: 151.1924459},
+                    {name: 'Gallon', lat: -33.8694919, lon: 151.1936233},
+                    {name: 'Three Wise Monkeys', lat: -33.8762559, lon: 151.2060093},
+                    {name: 'Barzini', lat: -33.8676931, lon: 151.1929175},
+                    {name: 'Kinselas', lat: -33.8810358, lon: 151.2165425},
+                    {name: 'The Standard Bowl', lat: -33.8809601, lon: 151.2165572},
+                    {name: 'Midnight Shift', lat: -33.8790473, lon: 151.2146574},
+                    {name: 'The Taphouse', lat: -33.8846302, lon: 151.2181272},
+                    {name: 'Apollo', lat: -33.8846044, lon: 151.1962756},
+                    {name: 'Madison Hotel', lat: -33.8856665, lon: 151.2073196},
+                    {name: 'Strawberry Hills Hotel', lat: -33.8865025, lon: 151.2080346},
+                    {name: 'Hotel Regent', lat: -33.8923588, lon: 151.200279},
+                    {name: 'Sneaky Possum', lat: -33.8871632, lon: 151.1989078},
+                    {name: 'Mr Tipley\'s', lat: -33.868688, lon: 151.2044295},
+                    {name: 'The Royal Hotel', lat: -33.8926239, lon: 151.1916877},
+                    {name: 'Haymarket Hotel', lat: -33.8791931, lon: 151.2068844},
+                    {name: 'The Carrington', lat: -33.8941463, lon: 151.2088627},
+                    {name: 'The Dolphin Hotel', lat: -33.8855208, lon: 151.2123775},
+                    {name: 'The Clock Hotel', lat: -33.8864708, lon: 151.2134086},
+                    {name: 'The Beresford Hotel', lat: -33.886968, lon: 151.2127378},
+                    {name: 'Ramblin\' Rascal Tavern', lat: -33.8806719, lon: 151.2127919},
+                    {name: 'The Lord Dudley', lat: -33.8881896, lon: 151.2389796},
+                    {name: 'The Grand Pacific', lat: -33.8770843, lon: 151.2163892},
+                    {name: 'Darlo Bar', lat: -33.8748872, lon: 151.2169706},
+                    {name: 'The Winery', lat: -33.8816968, lon: 151.2161308},
+                    {name: 'The Roosevelt', lat: -33.8713291, lon: 151.2194133},
+                    {name: 'Kings Cross Hotel', lat: -33.8745832, lon: 151.2214619},
+                    {name: 'Bourbon Bar', lat: -33.8746305, lon: 151.2211827},
+                    {name: 'The Tilbury Hotel', lat: -33.8670699, lon: 151.2193444},
+                    {name: 'Freda\'s', lat: -33.8807485, lon: 151.1992783},
+                    {name: 'The Bank Hotel', lat: -33.8932866, lon: 151.1835341},
+                    {name: 'Earl\'s Juke Joint', lat: -33.8970784, lon: 151.1802142},
+                    {name: 'The Courthouse Hotel', lat: -33.8990513, lon: 151.1813274},
+                    {name: 'Young Henrys', lat: -33.8938843, lon: 151.1840456},
+                    {name: 'The Midnight Special', lat: -33.8994636, lon: 151.1731449},
+                    {name: 'The Hive Bar', lat: -33.8933685, lon: 151.1831987},
+                    {name: 'Kelly\'s on King', lat: -33.8937015, lon: 151.1831168},
+                    {name: 'The Petersham', lat: -33.8923477, lon: 151.1539923},
+                    {name: 'The Gladstone Hotel', lat: -33.8751865, lon: 151.1590447},
+                    {name: 'The Royal Albert Hotel', lat: -33.8703089, lon: 151.1549812},
+                    {name: 'Welcome Hotel', lat: -33.8726419, lon: 151.1604871},
+                    {name: 'The Town Hall Hotel', lat: -33.8915815, lon: 151.1839322},
+                    {name: 'Corridor', lat: -33.8925058, lon: 151.1828674},
+                    {name: 'The Vanguard', lat: -33.8940478, lon: 151.1831982},
+                    {name: 'The Sly Fox', lat: -33.8990256, lon: 151.1731027},
+                    {name: 'Sauce Brewing', lat: -33.9079849, lon: 151.1821138},
+                    {name: 'The Duke of Edinburgh', lat: -33.8925578, lon: 151.1827955},
+                    {name: 'The Zanzibar', lat: -33.8930668, lon: 151.1834406},
+                    {name: 'The Botany View Hotel', lat: -33.9451234, lon: 151.1947826},
+                    {name: 'The Old Fitzroy', lat: -33.8670518, lon: 151.2193756},
+                    {name: 'Bar Patron', lat: -33.8664378, lon: 151.2089761},
+                    {name: 'The Malaya', lat: -33.8662754, lon: 151.2091854},
+                    {name: 'Love Tilly Devine', lat: -33.8755873, lon: 151.2169134},
+                    {name: 'Shady Pines Saloon', lat: -33.8744952, lon: 151.2171483},
+                    {name: 'Eau de Vie', lat: -33.8755873, lon: 151.2169134},
+                    {name: 'Dear Sainte Éloise', lat: -33.8813142, lon: 151.2110986},
+                    {name: 'Nomad', lat: -33.8845735, lon: 151.2115568},
+                    {name: 'Flight Club Sydney', lat: -33.8596, lon: 151.2075}
+                ];
+                knownBars.push(...fallbackBars);
+                const buttonsContainer = document.getElementById('presetButtons');
+                fallbackBars.forEach(bar => {
+                    const btn = document.createElement('button');
+                    btn.className = 'preset-btn';
+                    btn.textContent = bar.name;
+                    btn.onclick = () => addBarByCoords(bar.name, bar.lat, bar.lon);
+                    buttonsContainer.appendChild(btn);
+                });
+            }
+        }
+
+        function addBarByCoords(name, lat, lon) {
+            const drinksPerBar = parseInt(document.getElementById('drinksPerBar').value) || 2;
+            locations.push({ name, lat, lon, beers: drinksPerBar });
+            totalBeers += drinksPerBar;
+            updateDisplay();
+            updateTotalTime();
+        }
+
+        function addCustomLocation() {
+            const venueName = document.getElementById('venueName').value.trim();
+            if (!venueName) {
+                alert('Please enter a venue name');
+                return;
+            }
+            const drinksPerBar = parseInt(document.getElementById('drinksPerBar').value) || 2;
+            // Use map center as default for custom venues
+            const center = map.getCenter();
+            locations.push({ name: venueName, lat: center.lat, lon: center.lng, beers: drinksPerBar });
+            totalBeers += drinksPerBar;
+            document.getElementById('venueName').value = '';
+            updateDisplay();
+            updateTotalTime();
+        }
+
+        function removeLocation(index) {
+            totalBeers -= locations[index].beers;
+            locations.splice(index, 1);
+            updateDisplay();
+            updateTotalTime();
+        }
+
+        function updateDisplay() {
+            document.getElementById('venueCount').textContent = locations.length;
+            document.getElementById('beerCount').textContent = totalBeers;
+
+            // Over the limit badge
+            const overLimitBadge = document.getElementById('overLimitBadge');
+            if (totalBeers >= 10) {
+                overLimitBadge.style.display = 'block';
+                document.getElementById('overLimitScore').textContent = `${totalBeers}`;
+            } else {
+                overLimitBadge.style.display = 'none';
+            }
+
+            // Venue stats
+            const venueStats = document.getElementById('venueStats');
+            const venueStatsList = document.getElementById('venueStatsList');
+            if (locations.length > 0) {
+                venueStats.style.display = 'block';
+                venueStatsList.innerHTML = locations.map((loc, i) => 
+                    `<div>${i + 1}. ${loc.name} — ${loc.beers} 🍺</div>`
+                ).join('');
+            } else {
+                venueStats.style.display = 'none';
+            }
+
+            // Clear existing markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            // Add markers (draggable with labels)
+            locations.forEach((loc, index) => {
+                // Truncate name if too long
+                const displayName = loc.name.length > 15 ? loc.name.substring(0, 13) + '...' : loc.name;
+                
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `
+                        <div style="width:14px;height:14px;">${index + 1}</div>
+                        <div class="marker-label-overlay">${displayName}</div>
+                    `,
+                    iconSize: [14, 14]
+                });
+
+                const marker = L.marker([loc.lat, loc.lon], { 
+                    icon,
+                    draggable: true 
+                })
+                    .addTo(map)
+                    .bindPopup(`<strong>${loc.name}</strong><br>${loc.beers} 🍺`);
+
+                // Update location on drag
+                marker.on('dragend', function(e) {
+                    const newPos = e.target.getLatLng();
+                    loc.lat = newPos.lat;
+                    loc.lon = newPos.lng;
+                    updateDisplay();
+                });
+
+                markers.push(marker);
+            });
+
+            // Draw route
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+            }
+
+            if (locations.length >= 2) {
+                const coords = locations.map(l => [l.lat, l.lon]);
+                // Close loop
+                coords.push([locations[0].lat, locations[0].lon]);
+                routePolyline = L.polyline(coords, {
+                    color: '#fc4c02',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+            }
+
+            // Auto-fit bounds when adding/removing
+            fitRouteToMap();
+
+            updateLocationList();
+
+            // Show/hide fit button
+            const fitBtn = document.getElementById('fitRouteBtn');
+            if (locations.length > 0) {
+                fitBtn.classList.add('show');
+            } else {
+                fitBtn.classList.remove('show');
+            }
+        }
+
+        function fitRouteToMap() {
+            if (locations.length === 0) return;
+            
+            if (locations.length === 1) {
+                // Single location - center and zoom in
+                map.setView([locations[0].lat, locations[0].lon], 17);
+            } else {
+                // Multiple locations - fit bounds with nice padding
+                const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lon]));
+                map.fitBounds(bounds, { 
+                    padding: [80, 80],
+                    maxZoom: 16,
+                    animate: true,
+                    duration: 0.5
+                });
+            }
+        }
+
+        function updateLocationList() {
+            const list = document.getElementById('locationList');
+            if (locations.length === 0) {
+                list.innerHTML = '<div style="color: #999; padding: 5px 0; text-align: center;">No venues added yet</div>';
+                return;
+            }
+            list.innerHTML = locations.map((loc, index) => `
+                <div class="location-item">
+                    <span><strong>${index + 1}.</strong> ${loc.name}</span>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <input type="number" value="${loc.beers}" min="1" max="20" 
+                               onchange="updateBeerCount(${index}, this.value)"
+                               style="width: 50px; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;">
+                        <span style="font-size: 11px;">🍺</span>
+                        <button onclick="removeLocation(${index})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateBeerCount(index, newCount) {
+            const oldCount = locations[index].beers;
+            const newCountInt = parseInt(newCount) || 1;
+            locations[index].beers = newCountInt;
+            totalBeers = totalBeers - oldCount + newCountInt;
+            document.getElementById('beerCount').textContent = totalBeers;
+            
+            const overLimitBadge = document.getElementById('overLimitBadge');
+            if (totalBeers >= 10) {
+                overLimitBadge.style.display = 'block';
+                document.getElementById('overLimitScore').textContent = `${totalBeers}`;
+            } else {
+                overLimitBadge.style.display = 'none';
+            }
+        }
+
+        function clearAll() {
+            if (locations.length === 0) return;
+            if (confirm('Clear all venues?')) {
+                locations = [];
+                totalBeers = 0;
+                updateDisplay();
+                updateTotalTime();
+            }
+        }
+
+        function toggleControls() {
+            const controls = document.getElementById('controls');
+            const toggleText = document.getElementById('toggleText');
+            controls.classList.toggle('hidden');
+            toggleText.textContent = controls.classList.contains('hidden') ? 'Show Controls' : 'Hide Controls';
+        }
+
+        function updateTotalTime() {
+            const timePerBar = parseInt(document.getElementById('timePerBar').value) || 45;
+            const totalMinutes = timePerBar * locations.length;
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            document.getElementById('timeValue').textContent = `${hours}h ${minutes}m`;
+        }
+
+        function editTitle() {
+            const newTitle = prompt('Edit title:', document.getElementById('mainTitle').textContent);
+            if (newTitle && newTitle.trim()) document.getElementById('mainTitle').textContent = newTitle.trim();
+        }
+
+        function editTime() {
+            const newTime = prompt('Edit time (e.g., "3h 45m"):', document.getElementById('timeValue').textContent);
+            if (newTime && newTime.trim()) document.getElementById('timeValue').textContent = newTime.trim();
+        }
+
+        function editUsername() {
+            const newName = prompt('Edit username:', document.getElementById('username').textContent);
+            if (newName && newName.trim()) document.getElementById('username').textContent = newName.trim();
+        }
+
+        function editTimestamp() {
+            const newTimestamp = prompt('Edit timestamp:', document.getElementById('timestamp').textContent);
+            if (newTimestamp && newTimestamp.trim()) document.getElementById('timestamp').textContent = newTimestamp.trim();
+        }
+
+        function editLocation() {
+            const newLocation = prompt('Edit location:', document.getElementById('location').textContent);
+            if (newLocation && newLocation.trim()) document.getElementById('location').textContent = newLocation.trim();
+        }
+
+        function addTaggedPerson() {
+            const nameInput = document.getElementById('taggedPerson');
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+            taggedPeople.push(name);
+            nameInput.value = '';
+            updateTaggedPeopleDisplay();
+        }
+
+        function updateTaggedPeopleDisplay() {
+            const controlsList = document.getElementById('taggedList');
+            const headerDisplay = document.getElementById('taggedPeopleDisplay');
+            const namesDisplay = document.getElementById('taggedNamesDisplay');
+            
+            if (taggedPeople.length === 0) {
+                controlsList.innerHTML = '<div style="color: #999;">No one tagged yet</div>';
+                headerDisplay.style.display = 'none';
+                return;
+            }
+            
+            controlsList.innerHTML = taggedPeople.map((name, index) => `
+                <span style="display: inline-block; background: #e8f4f8; padding: 4px 8px; border-radius: 12px; margin: 2px;">
+                    ${name}
+                    <button onclick="removeTaggedPerson(${index})" style="border: none; background: none; cursor: pointer; color: #666; padding: 0 0 0 4px;">×</button>
+                </span>
+            `).join('');
+            
+            headerDisplay.style.display = 'flex';
+            namesDisplay.textContent = taggedPeople.join(', ');
+        }
+
+        function removeTaggedPerson(index) {
+            taggedPeople.splice(index, 1);
+            updateTaggedPeopleDisplay();
+        }
+
+        function updateKudos() {
+            const kudosInput = document.getElementById('kudosInput');
+            const kudosCount = parseInt(kudosInput.value) || 1;
+            document.getElementById('kudosCount').textContent = kudosCount;
+        }
+
+        function updateProfilePic() {
+            const input = document.getElementById('profilePicInput');
+            const file = input.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const profilePic = document.querySelector('.profile-pic');
+                    profilePic.style.backgroundImage = `url(${e.target.result})`;
+                    profilePic.style.backgroundSize = 'cover';
+                    profilePic.style.backgroundPosition = 'center';
+                    profilePic.textContent = ''; // Remove emoji
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function switchMapStyle(style) {
+            // Remove current tile layer
+            if (currentTileLayer) {
+                map.removeLayer(currentTileLayer);
+            }
+            
+            currentMapStyle = style;
+            
+            if (style === 'cartodb') {
+                // CartoDB - clean, modern, download-friendly
+                currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                    maxZoom: 19,
+                    subdomains: 'abcd'
+                }).addTo(map);
+            } else if (style === 'osm') {
+                // OpenStreetMap - classic style
+                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(map);
+            }
+        }
+
+        function filterBars() {
+            const searchTerm = document.getElementById('barSearch').value.toLowerCase();
+            const buttons = document.querySelectorAll('.preset-btn');
+            buttons.forEach(button => {
+                button.style.display = button.textContent.toLowerCase().includes(searchTerm) ? 'inline-block' : 'none';
+            });
+        }
+
+        async function downloadPost() {
+            const controls = document.getElementById('controls');
+            const fitBtn = document.getElementById('fitRouteBtn');
+            const toggleBtn = document.querySelector('.toggle-controls-btn');
+            const downloadBtns = document.querySelectorAll('button[onclick="downloadPost()"]');
+            
+            const wasHidden = controls.classList.contains('hidden');
+            
+            // Hide UI elements
+            controls.classList.add('hidden');
+            if (fitBtn) fitBtn.style.display = 'none';
+            if (toggleBtn) toggleBtn.style.display = 'none';
+            downloadBtns.forEach(btn => btn.style.display = 'none');
+            
+            // Wait for render
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            try {
+                // Capture with html2canvas with CORS enabled
+                const canvas = await html2canvas(document.body, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true,
+                    ignoreElements: function(element) {
+                        // Skip Leaflet attribution and zoom controls
+                        return element.classList.contains('leaflet-control-container') || 
+                               element.classList.contains('leaflet-control');
+                    }
+                });
+                
+                // Convert to blob and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `beer-run-${Date.now()}.png`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                });
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Download failed. The map tiles cannot be captured due to browser security. Please use your system screenshot tool (Win+Shift+S) instead.');
+            } finally {
+                // Restore UI
+                if (!wasHidden) controls.classList.remove('hidden');
+                if (locations.length > 0 && fitBtn) fitBtn.style.display = 'block';
+                if (toggleBtn) toggleBtn.style.display = 'block';
+                downloadBtns.forEach(btn => btn.style.display = 'block');
+            }
+        }
+
+        // Initialize
+        initMap();
+        updateLocationList();
+        updateTaggedPeopleDisplay();
+    </script>
+</body>
+</html>
+
